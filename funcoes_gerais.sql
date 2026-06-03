@@ -11,9 +11,16 @@ BEGIN
 		WHEN 'produto' THEN 
 			F_SQL := FORMAT('INSERT INTO PRODUTO(NOME, DESCRICAO, VALOR, ID_CAT, ID_MARCA) VALUES (%s)', VALORES);
 		ELSE
-			RAISE EXCEPTION 'Não existe nenhuma tabela com esse nome.';
+			RAISE EXCEPTION 'Não existe nenhuma tabela com o nome %.', P_TABELA;
 	END CASE;
 	EXECUTE F_SQL;
+	
+	EXCEPTION
+		WHEN SQLSTATE '22001' THEN
+			RAISE NOTICE 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
+		WHEN OTHERS THEN
+			RAISE EXCEPTION 'Não foi possível fazer a inserção na tabela %. ERRO: %', P_TABELA, SQLERRM
+			USING HINT = 'Cheque a ordem e a quantidade dos parâmetros.OBS.: IDs são serial.';
 END;
 $$ LANGUAGE PLPGSQL;
 
@@ -23,6 +30,7 @@ SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', '21.00', nu
 select * from categoria;
 select * from produto;
 
+-------------------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION BUSCAR_PELO_NOME(P_NOME VARCHAR, TABELA TEXT) RETURNS SETOF RECORD AS $$
 DECLARE 
@@ -50,17 +58,18 @@ BEGIN
 	
 	END IF;
 	
-	RETURN QUERY EXECUTE F_QUERY USING '%' || P_NOME ||	'%';
+	RETURN QUERY EXECUTE F_QUERY USING P_NOME;
 
 	IF NOT FOUND THEN
-		RAISE EXCEPTION 'ERRO: Não existe nunhum registro na tabela % com o nome %', TABELA, P_NOME;
+		RAISE EXCEPTION 'NÃO EXISTE NENHUM REGISTRO NA TABELA % COM O NOME "%"', TABELA, P_NOME;
 	END IF;
+
+		EXCEPTION
+			WHEN RAISE_EXCEPTION THEN
+        		RAISE;
+			WHEN OTHERS THEN
+				RAISE EXCEPTION 'NÃO FOI POSSÍVEL COMPLETAR A BUSCA. ERRO: %', SQLERRM;
 END;
 $$ LANGUAGE PLPGSQL;
 
 SELECT * FROM BUSCAR_PELO_NOME('MOLECA', 'MARCA') AS (ID_ITEM INT, NOME VARCHAR, DESCRICAO VARCHAR);
-
--- ESSA ETAPA CONTINUA COM UM PROBLEMA: SE NO SELECT DE EXECUÇÃO, FOR PASSADO PARÂMETROS A MAIS OU A MENOS
--- DO QUE EXISTE NA TABELA, É LANÇADA UM EXCEÇÃO DO POSTGREE.
-
--- PRECISAMOS DECIDIR SE LANÇAREMOS UMA EXCEÇÃO DE ERRO GERAL OU SE DEIXAMOS ISSO DESSA FORMA MSM.
