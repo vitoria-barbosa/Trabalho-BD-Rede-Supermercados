@@ -26,7 +26,8 @@ $$ LANGUAGE PLPGSQL;
 
 
 SELECT INSERIR('categoria', 'frios');
-SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', '21.00', null, null);
+SELECT INSERIR('categoria', null);
+SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', null, null, null);
 select * from categoria;
 select * from produto;
 
