@@ -17,7 +17,7 @@ BEGIN
 	
 	EXCEPTION
 		WHEN SQLSTATE '22001' THEN
-			RAISE NOTICE 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
+			RAISE EXCEPTION 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
 		WHEN OTHERS THEN
 			RAISE EXCEPTION 'Não foi possível fazer a inserção na tabela %. ERRO: %', P_TABELA, SQLERRM
 			USING HINT = 'Cheque a ordem e a quantidade dos parâmetros.OBS.: IDs são serial.';
@@ -26,11 +26,64 @@ $$ LANGUAGE PLPGSQL;
 
 
 SELECT INSERIR('categoria', 'frios');
-SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', '21.00', null, null);
+SELECT INSERIR('categoria', null);
+SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', null, null, null);
 select * from categoria;
 select * from produto;
 
+
+--------------------------------------------------------------------------------------------------------------
+
+
+CREATE OR REPLACE FUNCTION ATUALIZAR(P_TABELA TEXT, P_ID INT, VARIADIC P_PARAMETROS TEXT[]) RETURNS VOID AS $$
+DECLARE
+	ID_TABELA TEXT;
+	F_SQL TEXT;
+BEGIN
+	IF ARRAY_LENGTH(P_PARAMETROS, 1) % 2 != 0 THEN
+		RAISE EXCEPTION 'OS PARÂMETROS DEVEM SER PASSADOS EM PARES (COLUNA E VALOR).';
+	END IF;
+
+	IF NOT EXISTS (
+		SELECT 1
+		FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_SCHEMA = 'public' 
+		AND TABLE_NAME = LOWER(P_TABELA)
+	) THEN
+		RAISE EXCEPTION 'A TABELA "%" NÃO EXISTE.', P_TABELA;
+	END IF;
+
+	P_TABELA := LOWER(P_TABELA);
+
+	SELECT column_name INTO ID_TABELA
+	FROM information_schema.columns
+	WHERE table_name = P_TABELA
+	ORDER BY ordinal_position LIMIT 1;
+	RAISE NOTICE 'NOME ID: %', ID_TABELA;
+
+	PERFORM VALIDAR_ID(P_TABELA, ID_TABELA, P_ID);
+
+	FOR I IN 1 .. (ARRAY_LENGTH(P_PARAMETROS, 1) - 1) BY 2 LOOP
+        F_SQL := FORMAT('UPDATE %I SET %I = $1 WHERE %I = $2', LOWER(P_TABELA), LOWER(P_PARAMETROS[I]), ID_TABELA);   
+        EXECUTE F_SQL USING P_PARAMETROS[I+1], P_ID;
+	END LOOP;
+
+	EXCEPTION
+		WHEN SQLSTATE '22001' THEN
+			RAISE EXCEPTION 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
+		WHEN OTHERS THEN
+			RAISE EXCEPTION 'Não foi possível fazer a atualização na tabela %. ERRO: %', P_TABELA, SQLERRM
+			USING HINT = '
+			Ordem dos parâmetros: nome da tabela, id do registro 
+			e nome(s) da(s) coluna(s) e valor(es) que quer alterar respectivamente.';
+END;
+$$ LANGUAGE PLPGSQL;
+
+SELECT ATUALIZAR('CATEGORIA', 2, 'NOME', 'TESTE');
+
+
 -------------------------------------------------------------------------------------------------------
+
 
 CREATE OR REPLACE FUNCTION BUSCAR_PELO_NOME(P_NOME VARCHAR, TABELA TEXT) RETURNS SETOF RECORD AS $$
 DECLARE 
@@ -44,7 +97,6 @@ BEGIN
 			AND TABLE_NAME = LOWER(TABELA)
 	) THEN
 		RAISE EXCEPTION 'A TABELA "%" NÃO EXISTE.', TABELA;
-
 	END IF;
 	
 	IF NOT EXISTS (
@@ -55,7 +107,6 @@ BEGIN
 			AND COLUMN_NAME = 'nome' 
 	) THEN
 		RAISE EXCEPTION 'NÃO EXISTE COLUNA "NOME" NA TABELA "%".', TABELA;
-	
 	END IF;
 	
 	RETURN QUERY EXECUTE F_QUERY USING P_NOME;
@@ -64,12 +115,10 @@ BEGIN
 		RAISE EXCEPTION 'NÃO EXISTE NENHUM REGISTRO NA TABELA % COM O NOME "%"', TABELA, P_NOME;
 	END IF;
 
-		EXCEPTION
-			WHEN RAISE_EXCEPTION THEN
-        		RAISE;
-			WHEN OTHERS THEN
-				RAISE EXCEPTION 'NÃO FOI POSSÍVEL COMPLETAR A BUSCA. ERRO: %', SQLERRM;
+	EXCEPTION
+		WHEN OTHERS THEN
+			RAISE EXCEPTION 'NÃO FOI POSSÍVEL COMPLETAR A BUSCA. ERRO: %', SQLERRM;
 END;
 $$ LANGUAGE PLPGSQL;
 
-SELECT * FROM BUSCAR_PELO_NOME('MOLECA', 'MARCA') AS (ID_ITEM INT, NOME VARCHAR, DESCRICAO VARCHAR);
+SELECT * FROM BUSCAR_PELO_NOME('teste', 'categoria') AS (ID_CAT INT, NOME VARCHAR, ATIVO BOOLEAN);
