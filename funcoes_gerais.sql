@@ -3,13 +3,15 @@ DECLARE
     VALORES TEXT;
     F_SQL TEXT;
 BEGIN 
-    SELECT STRING_AGG(QUOTE_NULLABLE(VAL), ', ') INTO VALORES FROM UNNEST(P_VALORES) AS VAL;
+    SELECT STRING_AGG(QUOTE_NULLABLE(UPPER(VAL)), ', ') INTO VALORES FROM UNNEST(P_VALORES) AS VAL;
 
 	CASE LOWER(P_TABELA)
 		WHEN 'categoria' THEN
 			F_SQL := FORMAT('INSERT INTO CATEGORIA(NOME) VALUES (%s)', VALORES);
 		WHEN 'produto' THEN 
 			F_SQL := FORMAT('INSERT INTO PRODUTO(NOME, DESCRICAO, VALOR, ID_CAT, ID_MARCA) VALUES (%s)', VALORES);
+		WHEN 'marca' THEN
+			F_SQL := FORMAT('INSERT INTO MARCA(NOME) VALUES (%s)', VALORES);
 		ELSE
 			RAISE EXCEPTION 'Não existe nenhuma tabela com o nome %.', P_TABELA;
 	END CASE;
@@ -24,11 +26,26 @@ BEGIN
 END;
 $$ LANGUAGE PLPGSQL;
 
-
+---------------------------
+--       TESTES          --
+---------------------------
 SELECT INSERIR('categoria', 'frios');
-SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', '21.00', null, null);
+SELECT INSERIR('categoria', 'FRIOS');
+SELECT INSERIR('categoria', null);
+SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', null, null, null);
+
+SELECT INSERIR('MARCA', 'MOLECA');
+SELECT INSERIR('MARCA', 'zacy');
+SELECT INSERIR('MARCA', 'ZAXY');
+
+SELECT INSERIR('MARCA', '     ');
+SELECT INSERIR('MARCA', '');
+
+SELECT INSERIR('categoria', '');
+
 select * from categoria;
 select * from produto;
+select * from MARCA;
 
 -------------------------------------------------------------------------------------------------------
 
@@ -72,4 +89,5 @@ BEGIN
 END;
 $$ LANGUAGE PLPGSQL;
 
-SELECT * FROM BUSCAR_PELO_NOME('MOLECA', 'MARCA') AS (ID_ITEM INT, NOME VARCHAR, DESCRICAO VARCHAR);
+SELECT * FROM BUSCAR_PELO_NOME('MOLECA', 'MARCA') AS (ID_MARCA INT, NOME VARCHAR, ATIVO BOOLEAN);
+SELECT * FROM BUSCAR_PELO_NOME('', 'MARCA') AS (ID_MARCA INT, NOME VARCHAR, ATIVO BOOLEAN);
