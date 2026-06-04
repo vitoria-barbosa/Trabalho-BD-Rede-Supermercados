@@ -30,9 +30,8 @@ $$ LANGUAGE PLPGSQL;
 --       TESTES          --
 ---------------------------
 SELECT INSERIR('categoria', 'frios');
-SELECT INSERIR('categoria', null);
-
 SELECT INSERIR('categoria', 'FRIOS');
+SELECT INSERIR('categoria', null);
 SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', null, null, null);
 
 SELECT INSERIR('MARCA', 'MOLECA');
