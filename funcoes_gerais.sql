@@ -15,17 +15,18 @@ BEGIN
 	END CASE;
 	EXECUTE F_SQL;
 	
-	-- EXCEPTION
-	-- 	WHEN SQLSTATE '22001' THEN
-	-- 		RAISE NOTICE 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
-	-- 	WHEN OTHERS THEN
-	-- 		RAISE EXCEPTION 'Não foi possível fazer a inserção na tabela %. ERRO: %', P_TABELA, SQLERRM
-	-- 		USING HINT = 'Cheque a ordem e a quantidade dos parâmetros.OBS.: IDs são serial.';
+	EXCEPTION
+		WHEN SQLSTATE '22001' THEN
+			RAISE NOTICE 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
+		WHEN OTHERS THEN
+			RAISE EXCEPTION 'Não foi possível fazer a inserção na tabela %. ERRO: %', P_TABELA, SQLERRM
+			USING HINT = 'Cheque a ordem e a quantidade dos parâmetros.OBS.: IDs são serial.';
 END;
 $$ LANGUAGE PLPGSQL;
 
 
 SELECT INSERIR('categoria', 'frios');
+SELECT INSERIR('categoria', null);
 SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', null, null, null);
 select * from categoria;
 select * from produto;
