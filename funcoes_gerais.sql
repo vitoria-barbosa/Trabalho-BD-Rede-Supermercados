@@ -12,10 +12,13 @@ BEGIN
 			F_SQL := FORMAT('INSERT INTO PRODUTO(NOME, DESCRICAO, VALOR, ID_CAT, ID_MARCA) VALUES (%s)', VALORES);
 		WHEN 'marca' THEN
 			F_SQL := FORMAT('INSERT INTO MARCA(NOME) VALUES (%s)', VALORES);
+		WHEN 'mercado' THEN
+			F_SQL := FORMAT('INSERT INTO MERCADO(CNPJ, LOGRADOURO, NUM, BAIRRO, CIDADE, ESTADO) VALUES (%s)', VALORES);
 		ELSE
 			RAISE EXCEPTION 'Não existe nenhuma tabela com o nome %.', P_TABELA;
 	END CASE;
 	EXECUTE F_SQL;
+	RAISE NOTICE 'INSERÇÃO NA TABELA % FEITA COM SUCESSO!', P_TABELA;
 	
 	EXCEPTION
 		WHEN SQLSTATE '22001' THEN
@@ -32,7 +35,7 @@ $$ LANGUAGE PLPGSQL;
 SELECT INSERIR('categoria', 'frios');
 SELECT INSERIR('categoria', 'FRIOS');
 SELECT INSERIR('categoria', null);
-SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', null, null, null);
+SELECT INSERIR('produto', 'farinha de trigo', '    ', '10.50', null, null);
 
 SELECT INSERIR('MARCA', 'MOLECA');
 SELECT INSERIR('MARCA', 'ZAXY');
@@ -44,9 +47,15 @@ SELECT INSERIR('MARCA', '');
 
 SELECT INSERIR('categoria', '');
 
+SELECT INSERIR('mercado', '1234567800019', 'Avenida Paulista', '1578', 'Bela Vista', 'São Paulo', 'SP');
+SELECT ATUALIZAR('mercado', '1', 'num', '6', 'cidade', 'Teresina');
+
+SELECT ATUALIZAR('categoria', '5', 'nome', 'null');
+
 select * from categoria;
 select * from produto;
 select * from MARCA;
+SELECT * FROM MERCADO;
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -76,14 +85,17 @@ BEGIN
 	FROM information_schema.columns
 	WHERE table_name = P_TABELA
 	ORDER BY ordinal_position LIMIT 1;
-	RAISE NOTICE 'NOME ID: %', ID_TABELA;
 
 	PERFORM VALIDAR_ID(P_TABELA, ID_TABELA, P_ID);
 
 	FOR I IN 1 .. (ARRAY_LENGTH(P_PARAMETROS, 1) - 1) BY 2 LOOP
-        F_SQL := FORMAT('UPDATE %I SET %I = $1 WHERE %I = $2', LOWER(P_TABELA), LOWER(P_PARAMETROS[I]), ID_TABELA);   
-        EXECUTE F_SQL USING P_PARAMETROS[I+1], P_ID;
+        F_SQL := FORMAT('UPDATE %I SET %I = %L WHERE %I = $1', 
+                        LOWER(P_TABELA), LOWER(P_PARAMETROS[I]), 
+                        UPPER(P_PARAMETROS[I+1]), ID_TABELA);   
+        EXECUTE F_SQL USING P_ID;
 	END LOOP;
+	RAISE NOTICE 'ATUALIZAÇÃO NA TABELA % FEITA COM SUCESSO!', P_TABELA;
+
 
 	EXCEPTION
 		WHEN SQLSTATE '22001' THEN
@@ -99,7 +111,7 @@ $$ LANGUAGE PLPGSQL;
 SELECT ATUALIZAR('CATEGORIA', 2, 'NOME', 'TESTE');
 
 
--------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
 
 
 CREATE OR REPLACE FUNCTION DELETAR(TABELA TEXT, DADOS JSONB) RETURNS VOID AS $$
