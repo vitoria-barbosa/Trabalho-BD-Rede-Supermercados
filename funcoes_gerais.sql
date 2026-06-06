@@ -35,8 +35,9 @@ SELECT INSERIR('categoria', null);
 SELECT INSERIR('produto', 'farinha de trigo', 'farinha descrição', null, null, null);
 
 SELECT INSERIR('MARCA', 'MOLECA');
-SELECT INSERIR('MARCA', 'zacy');
 SELECT INSERIR('MARCA', 'ZAXY');
+SELECT INSERIR('MARCA', 'LEOELEO');
+SELECT INSERIR('MARCA', 'SAMSUNG');
 
 SELECT INSERIR('MARCA', '     ');
 SELECT INSERIR('MARCA', '');
@@ -97,6 +98,49 @@ $$ LANGUAGE PLPGSQL;
 
 SELECT ATUALIZAR('CATEGORIA', 2, 'NOME', 'TESTE');
 
+
+-------------------------------------------------------------------------------------------------------
+
+
+CREATE OR REPLACE FUNCTION DELETAR(TABELA TEXT, DADOS JSONB) RETURNS VOID AS $$
+DECLARE
+	F_SQL TEXT;
+	F_CONDICOES TEXT;
+	CAMPO RECORD;	
+BEGIN
+	-- V_DADOS := (SELECT JSONB_OBJECT_AGG(KEY, TO_JSONB(UPPER(VALUE #>> '{}'))) FROM JSONB_EACH(DADOS));
+
+	PERFORM VALIDAR_NULOS(DADOS, TABELA);
+	
+	F_CONDICOES := '';
+	FOR CAMPO IN SELECT * FROM JSONB_EACH(DADOS)
+	LOOP
+		IF EXISTS (SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = TABELA AND COLUMN_NAME = CAMPO.KEY) THEN
+			F_CONDICOES := F_CONDICOES || FORMAT('AND %I = %L ', LOWER(CAMPO.KEY), UPPER(CAMPO.VALUE #>> '{}'));
+		ELSE
+			RAISE EXCEPTION 'A coluna "%" informada não existe na tabela "%".', CAMPO.KEY, TABELA;
+		END IF;
+
+	END LOOP;
+	   
+	F_SQL := FORMAT('UPDATE %I SET ativo = FALSE WHERE 1=1 ', LOWER(TABELA)) || F_CONDICOES;
+	RAISE NOTICE 'SQL GERADO: %', f_sql;
+
+	EXECUTE F_SQL;
+	RAISE NOTICE 'Deleção do valor "%" da tabela "%" realizada com sucesso!', DADOS, TABELA;
+END;
+$$ LANGUAGE PLPGSQL;
+
+SELECT DELETAR('CLIENTE', '{"id_marca": "1"}'::jsonb)
+SELECT DELETAR('MARCA', '{"NOME": "LEOELEO"}'::jsonb)
+SELECT DELETAR('MARCA', '{"nome": "LEOELEO"}'::jsonb)
+SELECT DELETAR('MARCA', '{"NOME": "leoeleo"}'::jsonb)
+SELECT DELETAR('MARCA', '{"nome": "samsung"}'::jsonb)
+
+SELECT DELETAR('MARCA', '{"IDADE": null}'::jsonb)
+SELECT * FROM CATEGORIA
+SELECT * FROM MARCA
+SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='categoria'
 
 -------------------------------------------------------------------------------------------------------
 
