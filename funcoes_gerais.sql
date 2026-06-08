@@ -2,6 +2,7 @@ CREATE OR REPLACE FUNCTION INSERIR(P_TABELA TEXT, VARIADIC P_VALORES TEXT[]) RET
 DECLARE
     VALORES TEXT;
     F_SQL TEXT;
+		ID_PROD INT;
 BEGIN 
     SELECT STRING_AGG(QUOTE_NULLABLE(UPPER(VAL)), ', ') INTO VALORES FROM UNNEST(P_VALORES) AS VAL;
 
@@ -14,6 +15,10 @@ BEGIN
 			F_SQL := FORMAT('INSERT INTO MARCA(NOME) VALUES (%s)', VALORES);
 		WHEN 'mercado' THEN
 			F_SQL := FORMAT('INSERT INTO MERCADO(CNPJ, LOGRADOURO, NUM, BAIRRO, CIDADE, ESTADO) VALUES (%s)', VALORES);
+		WHEN 'estoque' THEN 
+			SELECT ID_PRODUTO INTO ID_PROD FROM BUSCAR_PELO_NOME(P_VALORES[2], 'produto') AS (ID_PRODUTO INT, NOME VARCHAR, DESCRICAO VARCHAR, VALOR NUMERIC, ID_CAT INT, ID_MARCA INT, ATIVO BOOLEAN);
+			VALORES := FORMAT('%L, %s, %L', UPPER(P_VALORES[1]), ID_PROD, UPPER(P_VALORES[3]));
+			F_SQL := FORMAT('INSERT INTO ESTOQUE(ID_MERC, ID_PROD, QTD_ESTOQUE) VALUES (%s)', VALORES);
 		ELSE
 			RAISE EXCEPTION 'Não existe nenhuma tabela com o nome %.', P_TABELA;
 	END CASE;
@@ -35,7 +40,7 @@ $$ LANGUAGE PLPGSQL;
 SELECT INSERIR('categoria', 'frios');
 SELECT INSERIR('categoria', 'FRIOS');
 SELECT INSERIR('categoria', null);
-SELECT INSERIR('produto', 'farinha de trigo', '    ', '10.50', null, null);
+SELECT INSERIR('produto', 'farinha de trigo', 'descriçao', '10.50', null, null);
 
 SELECT INSERIR('MARCA', 'MOLECA');
 SELECT INSERIR('MARCA', 'ZAXY');
@@ -48,14 +53,19 @@ SELECT INSERIR('MARCA', '');
 SELECT INSERIR('categoria', '');
 
 SELECT INSERIR('mercado', '1234567800019', 'Avenida Paulista', '1578', 'Bela Vista', 'São Paulo', 'SP');
-SELECT ATUALIZAR('mercado', '1', 'num', '6', 'cidade', 'Teresina');
 
+SELECT INSERIR('estoque', '1', 'farinha de trigo', '3');
+SELECT ATUALIZAR('estoque', '1', 'qtd_estoque', '20');
+
+SELECT ATUALIZAR('mercado', '1', 'num', '6', 'cidade', 'Teresina');
 SELECT ATUALIZAR('categoria', '5', 'nome', 'null');
+SELECT ATUALIZAR('produto', '16', 'nome', 'farinha de trigo');
 
 select * from categoria;
 select * from produto;
 select * from MARCA;
 SELECT * FROM MERCADO;
+SELECT * FROM ESTOQUE;
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -206,7 +216,7 @@ BEGIN
 
 	EXCEPTION
 		WHEN OTHERS THEN
-			RAISE EXCEPTION 'NÃO FOI POSSÍVEL COMPLETAR A BUSCA. ERRO: %', SQLERRM;
+			RAISE EXCEPTION 'NÃO FOI POSSÍVEL COMPLETAR A BUSCA PELO NOME. ERRO: %', SQLERRM;
 END;
 $$ LANGUAGE PLPGSQL;
 
