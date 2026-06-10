@@ -25,6 +25,8 @@ BEGIN
 			F_SQL := FORMAT('INSERT INTO FUNCIONARIO(NOME, CPF, DT_NASC, TELEFONE, ID_MERC, ID_CARGO) VALUES (%s)', VALORES);
 		WHEN 'cliente' THEN 
 			F_SQL := FORMAT('INSERT INTO CLIENTE(CPF, NOME) VALUES (%s)', VALORES);
+		WHEN 'pagamento' THEN
+			F_SQL := FORMAT('INSERT INTO PAGAMENTO(NOME) VALUES (%s)', VALORES);
 		ELSE
 			RAISE EXCEPTION 'Não existe nenhuma tabela com o nome %.', P_TABELA;
 	END CASE;
@@ -45,24 +47,33 @@ $$ LANGUAGE PLPGSQL;
 ---------------------------
 SELECT INSERIR('categoria', 'frios');
 SELECT INSERIR('categoria', 'FRIOS');
+SELECT INSERIR('categoria', '');
 SELECT INSERIR('categoria', null);
-SELECT INSERIR('produto', 'farinha de trigo', null, '10.50', null, null);
 
 SELECT INSERIR('MARCA', 'MOLECA');
 SELECT INSERIR('MARCA', 'ZAXY');
 SELECT INSERIR('MARCA', 'LEOELEO');
 SELECT INSERIR('MARCA', 'SAMSUNG');
-
 SELECT INSERIR('MARCA', '     ');
 SELECT INSERIR('MARCA', '');
 
-SELECT INSERIR('categoria', '');
+SELECT INSERIR('produto', 'farinha de trigo', null, '10.50', null, null);
+
+SELECT INSERIR('PAGAMENTO', 'DÉBITO');
+SELECT INSERIR('PAGAMENTO', 'DEBITO'); -- ACENTOU DIFERENCIA PALAVRAS IGUAIS / TENTEI ADICIONAR UNACCENT MAS NÃO É UMA EXTENSÃO PADRÃO, PRECISA DE INSTALAÇÃO
 
 SELECT INSERIR('mercado', '1234567800019', 'Avenida Paulista', '1578', 'Bela Vista', 'São Paulo', 'SP');
 
 SELECT INSERIR('estoque', '1', 'farinha de trigo', '3');
-SELECT ATUALIZAR('estoque', '1', 'qtd_estoque', '20');
 
+SELECT INSERIR('CARGO', 'SUPERVISOR DE FROTA', '2500')
+
+SELECT INSERIR('FUNCIONARIO', 'ALEXA','0889', '2006-04-03', '86988574021', '1', '1')
+
+SELECT INSERIR('CLIENTE', '987', 'A1MANDA')
+
+
+SELECT ATUALIZAR('estoque', '1', 'qtd_estoque', '20');
 SELECT ATUALIZAR('mercado', '1', 'num', '6', 'cidade', 'Teresina');
 SELECT ATUALIZAR('categoria', '5', 'nome', 'null');
 SELECT ATUALIZAR('produto', '20', 'ativo', 'false');
@@ -72,7 +83,9 @@ select * from produto;
 select * from MARCA;
 SELECT * FROM MERCADO;
 SELECT * FROM ESTOQUE;
-
+SELECT * FROM CARGO;
+SELECT * FROM FUNCIONARIO;
+SELECT * FROM CLIENTE;
 
 --------------------------------------------------------------------------------------------------------------
 
@@ -169,7 +182,7 @@ BEGIN
 	F_SQL := FORMAT('UPDATE %I SET ativo = FALSE WHERE ', LOWER(TABELA)) || F_CONDICOES;
 	EXECUTE F_SQL;
 	
-	RAISE NOTICE 'DELEÇÃO DA LINHA "%", DA TABELA "%", REALIZADA COM SUCESSO!', DADOS, TABELA;
+	RAISE NOTICE 'DELEÇÃO DA LINHA "%" DA TABELA "%" REALIZADA COM SUCESSO!', DADOS, TABELA;
 END;
 $$ LANGUAGE PLPGSQL;
 
@@ -180,6 +193,7 @@ SELECT DELETAR('MARCA', '{"NOME": "leoeleo"}'::jsonb)
 SELECT DELETAR('MARCA', '{"nome": "samsung"}'::jsonb)
 SELECT DELETAR('MARCA', '{"nome": "ZAXY"}'::jsonb)
 SELECT DELETAR('MARCA', '{"IDADE": null}'::jsonb)
+SELECT DELETAR('PAGAMENTO', '{"NOME": "3"}'::JSONB);
 
 SELECT * FROM CATEGORIA
 SELECT * FROM MARCA
