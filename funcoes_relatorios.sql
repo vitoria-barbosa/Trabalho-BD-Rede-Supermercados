@@ -1,0 +1,49 @@
+CREATE OR REPLACE FUNCTION FOLHA_DE_PAGAMENTO(F_ID_MERCADO INT) 
+RETURNS TABLE (
+	id_mercado int,
+	id_func int,
+	nome_func varchar,
+	id_cargo int,
+	nome_cargo varchar,
+	salario numeric
+) AS $$
+BEGIN
+	PERFORM VALIDAR_ID('mercado', 'id_mercado', F_ID_MERCADO);
+	
+	RETURN QUERY 
+	SELECT F.ID_MERC, F.ID_FUNC, F.NOME, F.ID_CARGO, C.NOME, C.SALARIO 
+	FROM FUNCIONARIO F INNER JOIN CARGO C ON
+	F.ID_CARGO = C.ID_CARGO 
+	WHERE F.ID_MERC = F_ID_MERCADO AND F.ATIVO = TRUE;
+END;
+$$ LANGUAGE PLPGSQL;
+
+
+CREATE OR REPLACE FUNCTION ESTOQUE_COMPLETO(F_ID_MERCADO INT) 
+RETURNS TABLE (
+	id_mercado int,
+	id_produto int,
+	nome_prod varchar,
+	descricao varchar,
+	valor numeric,
+	qtd_estoque int,
+	id_marca int,
+	marca varchar,
+	id_cat int,
+	nome_cat varchar
+) AS $$
+BEGIN
+	PERFORM VALIDAR_ID('mercado', 'id_mercado', F_ID_MERCADO);
+
+	RETURN QUERY
+	SELECT E.ID_MERC, E.ID_PROD, P.NOME, P.DESCRICAO, P.VALOR, E.QTD_ESTOQUE, P.ID_MARCA, M.NOME, P.ID_CAT, C.NOME
+	FROM ESTOQUE E INNER JOIN PRODUTO P ON E.ID_PROD = P.ID_PROD 
+	LEFT JOIN MARCA M ON P.ID_MARCA = M.ID_MARCA
+	LEFT JOIN CATEGORIA C ON P.ID_CAT = C.ID_CAT 
+	WHERE P.ATIVO = TRUE;
+END;
+$$ LANGUAGE PLPGSQL;
+
+
+SELECT * FROM FOLHA_DE_PAGAMENTO(1);
+SELECT * FROM ESTOQUE_COMPLETO(1);
