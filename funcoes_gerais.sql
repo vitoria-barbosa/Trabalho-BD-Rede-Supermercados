@@ -76,12 +76,15 @@ BEGIN
 		
 	EXCEPTION
 		WHEN SQLSTATE '22001' THEN
-			RAISE EXCEPTION 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
+			RAISE EXCEPTION 'O nome/texto fornecido excede a quantidade máxima de caracteres permitidos.';
 		WHEN SQLSTATE '22P02' THEN
-			RAISE EXCEPTION 'VALOR PASSADO É INVÁLIDO PARA A RESPECTIVA CONVERSÃO';
+			RAISE EXCEPTION 'O valor passado não corresponde com o tipo do atributo.';
+		WHEN SQLSTATE '42501' THEN
+			RAISE EXCEPTION 'O usuário atual não tem permissão para inserir na tabela %.', P_TABELA;
 		WHEN OTHERS THEN
 			RAISE EXCEPTION 'Não foi possível fazer a inserção na tabela %. ERRO: %', P_TABELA, SQLERRM
-			USING HINT = 'Cheque a ordem e a quantidade dos parâmetros.OBS.: IDs são serial.';
+			USING HINT = 'Cheque a ordem e a quantidade dos parâmetros.
+			OBS.: IDs são serial e não precisa passar o atributo "ativo" como parâmetro.';
 END;
 $$ LANGUAGE PLPGSQL;
 
@@ -176,6 +179,10 @@ BEGIN
 	PERFORM VALIDAR_ID(P_TABELA, ID_TABELA, P_ID);
 
 	FOR I IN 1 .. (ARRAY_LENGTH(P_PARAMETROS, 1) - 1) BY 2 LOOP
+		IF (LOWER(P_PARAMETROS[I]) = 'ativo') THEN
+			RAISE EXCEPTION 'Essa função não pode atualizar o atributo "ativo".';
+		END IF;
+			
         F_SQL := FORMAT('UPDATE %I SET %I = %L WHERE %I = $1', 
                         LOWER(P_TABELA), LOWER(P_PARAMETROS[I]), 
                         UPPER(P_PARAMETROS[I+1]), ID_TABELA);   
@@ -183,10 +190,13 @@ BEGIN
 	END LOOP;
 	RAISE NOTICE 'ATUALIZAÇÃO NA TABELA % FEITA COM SUCESSO!', P_TABELA;
 
-
 	EXCEPTION
 		WHEN SQLSTATE '22001' THEN
 			RAISE EXCEPTION 'O nome fornecido excede a quantidade máxima de caracteres permitidos.';
+		WHEN SQLSTATE '22P02' THEN
+			RAISE EXCEPTION 'O valor passado não corresponde com o tipo do atributo.';
+		WHEN SQLSTATE '42501' THEN
+			RAISE EXCEPTION 'O usuário atual não tem permissão para atualizar a tabela %.', P_TABELA;
 		WHEN OTHERS THEN
 			RAISE EXCEPTION 'Não foi possível fazer a atualização na tabela %. ERRO: %', P_TABELA, SQLERRM
 			USING HINT = '
@@ -195,7 +205,7 @@ BEGIN
 END;
 $$ LANGUAGE PLPGSQL;
 
-SELECT ATUALIZAR('CATEGORIA', 2, 'NOME', 'TESTE');
+SELECT ATUALIZAR('marca', '1', 'ativo', 'false');
 
 
 ------------------------------------------------------------------------------------------------------------
@@ -241,11 +251,17 @@ BEGIN
 	EXECUTE F_SQL;
 	
 	RAISE NOTICE 'DELEÇÃO DA LINHA "%" DA TABELA "%" REALIZADA COM SUCESSO!', DADOS, TABELA;
+	
+	EXCEPTION
+		WHEN SQLSTATE '42501' THEN
+			RAISE EXCEPTION 'O usuário atual não tem permissão para deletar/atualizar registros na tabela %.', TABELA;
+		WHEN OTHERS THEN
+			RAISE EXCEPTION 'Não foi possível fazer a deleção/desativação na tabela %. ERRO: %', TABELA, SQLERRM;
 END;
 $$ LANGUAGE PLPGSQL;
 
 SELECT DELETAR('CLIENTE', '{}'::jsonb)
-SELECT DELETAR('MARCA', '{"NOME": "LEOELEO"}'::jsonb)
+SELECT DELETAR('FUNCIONARIO', '{"NOME": "MARIA SILVA"}'::jsonb)
 SELECT DELETAR('MARCA', '{"nome": "LEOELEO"}'::jsonb)
 SELECT DELETAR('MARCA', '{"NOME": "leoeleo"}'::jsonb)
 SELECT DELETAR('MARCA', '{"nome": "samsung"}'::jsonb)
